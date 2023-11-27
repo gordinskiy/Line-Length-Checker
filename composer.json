@@ -1,0 +1,21 @@
+{
+    "name": "gordinskiy/line-length-checker",
+    "description": " PHP-CS-Fixer rule to check line length",
+    "type": "library",
+    "require": {
+        "php": "^7.4 || ^8.0",
+        "friendsofphp/php-cs-fixer": "^3.35"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Gordinskiy\\LineLengthChecker\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Dmitriy Gordinskiy",
+            "email": "dmitriy.gordinskiy94@gmail.com"
+        }
+    ]
+}
