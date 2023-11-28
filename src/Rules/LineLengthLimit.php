@@ -4,14 +4,41 @@ declare(strict_types=1);
 
 namespace Gordinskiy\LineLengthChecker\Rules;
 
-use PhpCsFixer\Fixer\FixerInterface;
+use PhpCsFixer\Fixer\ConfigurableFixerInterface;
+use PhpCsFixer\FixerConfiguration\FixerConfigurationResolver;
+use PhpCsFixer\FixerConfiguration\FixerConfigurationResolverInterface;
+use PhpCsFixer\FixerConfiguration\FixerOptionBuilder;
 use PhpCsFixer\FixerDefinition\FixerDefinition;
 use PhpCsFixer\FixerDefinition\FixerDefinitionInterface;
 use PhpCsFixer\Tokenizer\Token;
 use PhpCsFixer\Tokenizer\Tokens;
 
-class LineLengthLimit implements FixerInterface
+class LineLengthLimit implements ConfigurableFixerInterface
 {
+    private int $maxLength = 120;
+
+    /** @var string */
+    private const OPTION_MAX_LENGTH = 'max_length';
+
+    public function getConfigurationDefinition(): FixerConfigurationResolverInterface
+    {
+        return new FixerConfigurationResolver([
+            (new FixerOptionBuilder(self::OPTION_MAX_LENGTH, 'Maximum line length.'))
+                ->setAllowedTypes(['int'])
+                ->setDefault(120)
+                ->getOption(),
+        ]);
+    }
+
+    public function configure(array $configuration): void
+    {
+        $configuration = $this->getConfigurationDefinition()->resolve($configuration);
+
+        if ($maxLength = $configuration[self::OPTION_MAX_LENGTH] ?? null) {
+            $this->maxLength = $maxLength;
+        }
+    }
+
     public function getName(): string
     {
         return 'Gordinskiy/line_length_limit';
@@ -56,12 +83,12 @@ class LineLengthLimit implements FixerInterface
                 $previousLineEnd = array_shift($lines);
                 $nextLineBegin = array_pop($lines);
 
-                if (!self::isValidLength($lineLength + strlen($previousLineEnd))) {
+                if (!$this->isValidLength($lineLength + strlen($previousLineEnd))) {
                     return true;
                 }
 
                 foreach ($lines as $line) {
-                    if (!self::isValidLength(strlen($line))) {
+                    if (!$this->isValidLength(strlen($line))) {
                         return true;
                     }
                 }
@@ -75,9 +102,9 @@ class LineLengthLimit implements FixerInterface
         return false;
     }
 
-    private static function isValidLength(int $length): bool
+    private function isValidLength(int $length): bool
     {
-        return $length <= 120;
+        return $length <= $this->maxLength;
     }
 
     public function fix(\SplFileInfo $file, Tokens $tokens): void
@@ -97,7 +124,7 @@ class LineLengthLimit implements FixerInterface
             if ($lineBreaksCount === 0) {
                 $lineLength += strlen($tokenContent);
             } elseif ($lineBreaksCount === 1) {
-                if (!self::isValidLength($lineLength)) {
+                if (!$this->isValidLength($lineLength)) {
                     $tokens->insertAt($index, [
                         new Token([T_WHITESPACE, ' ']),
                         new Token([T_COMMENT, '# Line too long'])
@@ -112,13 +139,13 @@ class LineLengthLimit implements FixerInterface
                 $previousLineEnd = array_shift($lines);
                 $nextLineBegin = array_pop($lines);
 
-                if (!self::isValidLength($lineLength + strlen($previousLineEnd))) {
+                if (!$this->isValidLength($lineLength + strlen($previousLineEnd))) {
                     $buffer[0] = $buffer[0] . ' # Line too long';
                     $mustBeRebuild = true;
                 }
 
                 foreach ($lines as $key => $line) {
-                    if (!self::isValidLength(strlen($line))) {
+                    if (!$this->isValidLength(strlen($line))) {
                         $buffer[$key + 1] .= ' # Line too long';
                         $mustBeRebuild = true;
                     }
